@@ -2,6 +2,8 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
+from scipy.interpolate import make_interp_spline
+from collections import defaultdict
 
 # Configuración de conexión
 server = 'preguntasrec.database.windows.net'
@@ -41,10 +43,10 @@ def graficar_resultados(df):
     
     plt.figure(figsize=(14, 10))
     
-    x = df['usuarioID']
-    y = df['puntaje']
-
-    # Verificar si hay suficientes datos para la spline
+    # Primer gráfico: Línea con puntajes
+    x = df['usuarioID'].values
+    y = df['puntaje'].values
+    
     if len(x) >= 3:
         x_smooth = np.linspace(x.min(), x.max(), 300)
         spline = make_interp_spline(x, y, k=3)
@@ -53,38 +55,41 @@ def graficar_resultados(df):
         x_smooth = x
         y_smooth = y
 
-    # Primer gráfico: Línea con puntajes
     plt.subplot(2, 1, 1)
     plt.plot(x, y, marker='o', linestyle='-', color='b', alpha=0.3, label='Datos Originales')
     if len(x) >= 3:
-        plt.plot(x_smooth, y_smooth, color='b', label='Curva Suavizada')
+        plt.plot(x_smooth, y_smooth, color='b', linestyle='--', label='Curva Suavizada')
     plt.xlabel('ID de Usuario')
     plt.ylabel('Puntaje')
     plt.title('Gráfico de Puntajes por Usuario')
     
-    # Ajustar el límite del eje y
     plt.ylim(0, 100)
-    
     plt.grid(True)
     plt.legend()
     
-    # Segundo gráfico: Histograma de puntajes con etiquetas (puntaje en el eje x)
+    # Segundo gráfico: Barras con puntuaciones y etiquetas (tag) como barras
     plt.subplot(2, 1, 2)
-    bins = np.arange(0, 101, 10)  # Bins para el histograma
-    counts, bin_edges = np.histogram(df['puntaje'], bins=bins)
+    x = df['usuarioID']
+    y = df['puntaje']
+    tags = df['tag']
     
-    plt.bar(bins[:-1], counts, width=np.diff(bins), color='orange', edgecolor='black')
-    plt.xlabel('Puntaje')
-    plt.ylabel('Frecuencia')
-    plt.title('Histograma de Puntajes')
+    # Obtener una lista única de tags y asignarles un color
+    unique_tags = tags.unique()
+    colors = plt.cm.get_cmap('tab20', len(unique_tags))  # Cambia el colormap si hay muchos usuarios
     
-    # Añadir etiquetas de usuario sobre cada barra
-    for i in range(len(counts)):
-        usuarios_en_bin = df[(df['puntaje'] >= bins[i]) & (df['puntaje'] < bins[i + 1])]
-        if not usuarios_en_bin.empty:
-            etiquetas = '\n'.join(usuarios_en_bin['tag'].tolist())
-            plt.text(bins[i] + 5, counts[i] + 0.2, etiquetas, ha='left', va='bottom', rotation=90)
+    color_map = {tag: colors(i) for i, tag in enumerate(unique_tags)}
+    bar_colors = [color_map[tag] for tag in tags]
+    
+    plt.bar(x, y, color=bar_colors, edgecolor='black')
 
+    # Añadir etiquetas de usuario sobre cada barra
+    for i in range(len(x)):
+        plt.text(x[i], y[i] + 0.5, tags.iloc[i], ha='center', va='bottom', rotation=90)
+
+    plt.xlabel('ID de Usuario')
+    plt.ylabel('Puntuación')
+    plt.title('Puntuación de Usuarios')
+    
     plt.tight_layout()
     plt.show()
 
