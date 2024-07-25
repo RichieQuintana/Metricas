@@ -2,7 +2,6 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
-from scipy.interpolate import make_interp_spline
 
 # Configuración de conexión
 server = 'preguntasrec.database.windows.net'
@@ -69,23 +68,23 @@ def graficar_resultados(df):
     plt.grid(True)
     plt.legend()
     
-    # Segundo gráfico: Histograma de puntajes con etiquetas (orientación horizontal)
+    # Segundo gráfico: Histograma de puntajes con etiquetas (puntaje en el eje x)
     plt.subplot(2, 1, 2)
-    bins = np.arange(0, 101, 10)  # Crear bins de 10 en 10 hasta 100
-    counts, bins, patches = plt.hist(df['puntaje'], bins=bins, color='orange', edgecolor='black', orientation='horizontal')
-    plt.ylabel('Puntaje')
-    plt.xlabel('Frecuencia')
+    bins = np.arange(0, 101, 10)  # Bins para el histograma
+    counts, bin_edges = np.histogram(df['puntaje'], bins=bins)
+    
+    plt.bar(bins[:-1], counts, width=np.diff(bins), color='orange', edgecolor='black')
+    plt.xlabel('Puntaje')
+    plt.ylabel('Frecuencia')
     plt.title('Histograma de Puntajes')
     
-    # Añadir etiquetas de usuario al lado de cada barra
-    for patch, bin_start, bin_end in zip(patches, bins[:-1], bins[1:]):
-        usuarios_en_bin = df[(df['puntaje'] >= bin_start) & (df['puntaje'] < bin_end)]['Correo']
-        etiquetas = '\n'.join(usuarios_en_bin)
-        height = patch.get_y() + patch.get_height() / 2
-        plt.text(patch.get_width(), height, etiquetas, ha='left', va='center', rotation=0)
+    # Añadir etiquetas de usuario sobre cada barra
+    for i in range(len(counts)):
+        usuarios_en_bin = df[(df['puntaje'] >= bins[i]) & (df['puntaje'] < bins[i + 1])]
+        if not usuarios_en_bin.empty:
+            etiquetas = '\n'.join(usuarios_en_bin['tag'].tolist())
+            plt.text(bins[i] + 5, counts[i] + 0.2, etiquetas, ha='left', va='bottom', rotation=90)
 
-    plt.xlim(0, max(counts) * 1.2)  # Ajustar el límite del eje x para acomodar las etiquetas
-    
     plt.tight_layout()
     plt.show()
 
