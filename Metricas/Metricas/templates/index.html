@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Métricas en Tiempo Real</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/socket.io-client/dist/socket.io.min.js"></script>
+</head>
+<body>
+    <canvas id="lineChart" width="400" height="200"></canvas>
+    <canvas id="histogramChart" width="400" height="200"></canvas>
+    <script>
+        const socket = io();
+
+        const lineCtx = document.getElementById('lineChart').getContext('2d');
+        const lineChart = new Chart(lineCtx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Métricas',
+                    data: [],
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1,
+                    fill: false
+                }]
+            },
+            options: {
+                scales: {
+                    x: {
+                        type: 'time',
+                        time: {
+                            unit: 'second'
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        max: 10
+                    }
+                }
+            }
+        });
+
+        const histogramCtx = document.getElementById('histogramChart').getContext('2d');
+        const histogramChart = new Chart(histogramCtx, {
+            type: 'bar',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Frecuencia de Métricas',
+                    data: [],
+                    backgroundColor: 'orange',
+                    borderColor: 'black',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 10
+                    }
+                }
+            }
+        });
+
+        socket.on('metricas', function(data) {
+            const timestamps = data.map(d => new Date(d.MetricTimestamp));
+            const values = data.map(d => d.MetricValue);
+
+            lineChart.data.labels = timestamps;
+            lineChart.data.datasets[0].data = values;
+            lineChart.update();
+
+            histogramChart.data.labels = Array.from(new Set(values));
+            histogramChart.data.datasets[0].data = values.reduce((acc, value) => {
+                acc[value] = (acc[value] || 0) + 1;
+                return acc;
+            }, {});
+            histogramChart.update();
+        });
+    </script>
+</body>
+</html>
